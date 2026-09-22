@@ -1,9 +1,9 @@
 // src/lib/supabase/client.ts
-// Dipakai di Client Component (komponen dengan "use client")
 import { createBrowserClient } from '@supabase/ssr'
+import type { Database } from '@/lib/types/database.types'
 
 export function createClient() {
-  return createBrowserClient(
+  return createBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
