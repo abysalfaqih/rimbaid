@@ -26,10 +26,45 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // WAJIB dipanggil — ini yang me-refresh token sesi secara otomatis
+  // getUser() memvalidasi token langsung ke server Supabase Auth.
+  // JANGAN ganti dengan getSession() di sini — itu tidak selalu
+  // memverifikasi ulang token, jadi lebih mudah dipalsukan.
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
+  const pathname = request.nextUrl.pathname
+  const isAdminRoute = pathname.startsWith('/admin')
+  const isLoginRoute = pathname === '/admin/login'
+
+  if (isAdminRoute && !isLoginRoute && !user) {
+    return {
+      supabaseResponse: redirectWithCookies(request, supabaseResponse, '/admin/login'),
+      user,
+    }
+  }
+
+  if (isLoginRoute && user) {
+    return {
+      supabaseResponse: redirectWithCookies(request, supabaseResponse, '/admin/dashboard'),
+      user,
+    }
+  }
+
   return { supabaseResponse, user }
+}
+
+// Redirect tanpa kehilangan cookie sesi yang baru saja di-refresh Supabase
+function redirectWithCookies(
+  request: NextRequest,
+  sourceResponse: NextResponse,
+  pathname: string
+) {
+  const redirectUrl = request.nextUrl.clone()
+  redirectUrl.pathname = pathname
+  const redirectResponse = NextResponse.redirect(redirectUrl)
+  sourceResponse.cookies.getAll().forEach((cookie) => {
+    redirectResponse.cookies.set(cookie)
+  })
+  return redirectResponse
 }
