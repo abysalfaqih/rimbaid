@@ -106,7 +106,7 @@ export function VerificationFlow({
       <p className="mt-1 text-sm text-muted-foreground">{appName} — {buttonLabel}</p>
 
       <div className="my-8">
-        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <span className="text-sm text-muted-foreground">
           Langkah {current.step} dari 3
         </span>
         <div className="mt-3 flex justify-center gap-2">

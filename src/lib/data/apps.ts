@@ -107,3 +107,51 @@ export async function getAppRecommendations(appId: string) {
     .map((id) => appsById.get(id))
     .filter((app): app is NonNullable<typeof app> => app !== undefined)
 }
+
+export async function getAdminAppsList() {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('apps')
+    .select('id, name, slug, logo_url, is_published, is_new_update, created_at')
+    .order('created_at', { ascending: false })
+  return data ?? []
+}
+
+export async function getAppForEdit(appId: string) {
+  const supabase = await createClient()
+  const { data: app } = await supabase.from('apps').select('*').eq('id', appId).maybeSingle()
+  if (!app) return null
+
+  const { data: buttons } = await supabase
+    .from('download_buttons')
+    .select('id, label, url, sort_order')
+    .eq('app_id', appId)
+    .order('sort_order', { ascending: true })
+
+  const { data: screenshots } = await supabase
+    .from('app_screenshots')
+    .select('id, image_url, sort_order')
+    .eq('app_id', appId)
+    .order('sort_order', { ascending: true })
+
+  const { data: recommendations } = await supabase
+    .from('app_recommendations')
+    .select('recommended_app_id, sort_order')
+    .eq('app_id', appId)
+    .order('sort_order', { ascending: true })
+
+  return {
+    app,
+    buttons: buttons ?? [],
+    screenshots: screenshots ?? [],
+    recommendedAppIds: (recommendations ?? []).map((r) => r.recommended_app_id),
+  }
+}
+
+export async function getRecommendationOptions(excludeId?: string) {
+  const supabase = await createClient()
+  let query = supabase.from('apps').select('id, name').order('name', { ascending: true })
+  if (excludeId) query = query.neq('id', excludeId)
+  const { data } = await query
+  return data ?? []
+}

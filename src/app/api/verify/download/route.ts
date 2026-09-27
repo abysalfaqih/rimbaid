@@ -1,6 +1,9 @@
+import { after } from 'next/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { VERIFICATION_STEPS } from '@/lib/constants/verification'
+import { createClient } from '@/lib/supabase/server'
+import { recordAppDownload } from '@/lib/analytics/record-event'
 
 export async function GET(request: NextRequest) {
   const sessionId = request.nextUrl.searchParams.get('session')
@@ -32,6 +35,17 @@ export async function GET(request: NextRequest) {
   if (!button) return NextResponse.redirect(failUrl)
 
   await supabase.from('download_sessions').update({ consumed_at: new Date().toISOString() }).eq('id', sessionId)
+
+  const sessionClient = await createClient()
+  const {
+    data: { user: viewer },
+  } = await sessionClient.auth.getUser()
+
+  if (!viewer) {
+    after(() =>
+      recordAppDownload(session.app_id).catch((err) => console.error('[recordAppDownload] gagal:', err))
+    )
+  }
 
   return NextResponse.redirect(button.url)
 }

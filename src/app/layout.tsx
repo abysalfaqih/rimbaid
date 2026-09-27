@@ -1,32 +1,37 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
+import type { Metadata } from 'next'
+import type { ReactNode } from 'react'
+import { Fraunces, Work_Sans } from 'next/font/google'
+import { ThemeProvider } from '@/components/theme-provider'
+import './globals.css'
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+const fraunces = Fraunces({
+  subsets: ['latin'],
+  variable: '--font-fraunces',
+  weight: ['400', '500', '600', '700'],
+  style: ['normal', 'italic'],
+})
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const workSans = Work_Sans({
+  subsets: ['latin'],
+  variable: '--font-work-sans',
+})
 
 export const metadata: Metadata = {
   title: {
-    default: 'Rimba ID',
+    default: 'Rimba ID — Aplikasi buatan sendiri',
     template: '%s — Rimba ID',
   },
   description: 'Kumpulan aplikasi yang saya buat sendiri, tersedia untuk diunduh.',
 }
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="id" suppressHydrationWarning>
+      <body className={`${fraunces.variable} ${workSans.variable} font-sans antialiased`}>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          {children}
+        </ThemeProvider>
+      </body>
     </html>
-  );
+  )
 }

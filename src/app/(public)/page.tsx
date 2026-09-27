@@ -10,9 +10,9 @@ export default async function HomePage() {
   const hasMore = count > apps.length
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-10 sm:py-14">
+    <main className="mx-auto max-w-3xl px-4 py-10 sm:py-14">
       {newUpdateApp && (
-        <section className="mb-12">
+        <section className="mb-10 border-b border-border pb-10">
           <NewUpdateBanner
             slug={newUpdateApp.slug}
             name={newUpdateApp.name}
@@ -24,16 +24,14 @@ export default async function HomePage() {
       )}
 
       <section>
-        <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-lg font-semibold sm:text-xl">Semua Aplikasi</h2>
-        </div>
+        <h2 className="font-display text-lg font-semibold sm:text-xl">Semua Aplikasi</h2>
 
         {apps.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-border py-16 text-center text-sm text-muted-foreground">
-            Belum ada aplikasi yang dipublikasikan.
+          <p className="py-16 text-center text-sm text-muted-foreground">
+            Belum ada aplikasi di sini. Aplikasi pertama akan segera hadir.
           </p>
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-2 divide-y divide-border">
             {apps.map((app) => (
               <AppCard key={app.id} {...app} logoUrl={app.logo_url} />
             ))}
@@ -41,7 +39,7 @@ export default async function HomePage() {
         )}
 
         {hasMore && (
-          <div className="mt-8 flex justify-center">
+          <div className="mt-6 flex justify-center">
             <Button asChild variant="outline">
               <Link href="/apps">Lihat semua aplikasi</Link>
             </Button>

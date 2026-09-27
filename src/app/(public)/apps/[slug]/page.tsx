@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
+import { after } from 'next/server'
 import {
   getAppBySlug,
   getDownloadButtonLabels,
@@ -9,6 +10,8 @@ import {
 import { AppCard } from '@/components/public/app-card'
 import { DownloadButtonList } from '@/components/public/download-button-list'
 import { ScreenshotGallery } from '@/components/public/screenshot-gallery'
+import { createClient } from '@/lib/supabase/server'
+import { recordAppView } from '@/lib/analytics/record-event'
 
 type Props = {
   params: Promise<{ slug: string }>
@@ -29,6 +32,20 @@ export default async function AppDetailPage({ params }: Props) {
     notFound()
   }
 
+  const supabase = await createClient()
+  const {
+    data: { user: viewer },
+  } = await supabase.auth.getUser()
+
+  // Jangan hitung kunjungan admin sendiri sebagai "view" publik.
+  // after() menjalankan ini SETELAH respons dikirim ke browser,
+  // jadi tidak menambah waktu tunggu halaman sama sekali.
+  if (!viewer) {
+    after(() =>
+      recordAppView(app.id).catch((err) => console.error('[recordAppView] gagal:', err))
+    )
+  }
+
   const [buttons, screenshots, recommendations] = await Promise.all([
     getDownloadButtonLabels(app.id),
     getAppScreenshots(app.id),
@@ -36,7 +53,7 @@ export default async function AppDetailPage({ params }: Props) {
   ])
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-10 sm:py-14">
+    <main className="mx-auto max-w-3xl px-4 py-10 sm:py-14">
       <section className="flex flex-col gap-6 sm:flex-row sm:items-start">
         <div className="relative mx-auto h-28 w-28 shrink-0 overflow-hidden rounded-2xl border border-border bg-muted sm:mx-0">
           {app.logo_url ? (
@@ -49,7 +66,7 @@ export default async function AppDetailPage({ params }: Props) {
         </div>
 
         <div className="min-w-0 flex-1 text-center sm:text-left">
-          <h1 className="text-2xl font-bold sm:text-3xl">{app.name}</h1>
+          <h1 className="font-display text-2xl font-bold sm:text-3xl">{app.name}</h1>
           <dl className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1 text-sm text-muted-foreground sm:justify-start">
             {app.version && (
               <div className="flex gap-1">
@@ -87,8 +104,8 @@ export default async function AppDetailPage({ params }: Props) {
 
       {recommendations.length > 0 && (
         <section className="mt-14 border-t border-border pt-8">
-          <h2 className="mb-4 text-lg font-semibold">Mungkin Anda suka</h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <h2 className="mb-2 font-display text-lg font-semibold">Mungkin Anda suka</h2>
+          <div className="divide-y divide-border">
             {recommendations.map((rec) => (
               <AppCard
                 key={rec.id}
