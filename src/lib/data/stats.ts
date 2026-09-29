@@ -18,5 +18,10 @@ export async function getRecentEvents(limit = 20) {
     .order('created_at', { ascending: false })
     .limit(limit)
 
-  return data ?? []
+  return (data ?? []).map((event) => ({
+    id: event.id as string,
+    event_type: event.event_type as 'view' | 'download',
+    created_at: event.created_at as string,
+    apps: Array.isArray(event.apps) ? (event.apps[0] ?? null) : (event.apps ?? null),
+  }))
 }

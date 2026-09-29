@@ -1,27 +1,51 @@
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
+import { headers } from 'next/headers'
 import { after } from 'next/server'
+import type { Metadata } from 'next'
 import {
   getAppBySlug,
   getDownloadButtonLabels,
   getAppScreenshots,
   getAppRecommendations,
 } from '@/lib/data/apps'
+import { createClient } from '@/lib/supabase/server'
+import { recordAppView } from '@/lib/analytics/record-event'
 import { AppCard } from '@/components/public/app-card'
 import { DownloadButtonList } from '@/components/public/download-button-list'
 import { ScreenshotGallery } from '@/components/public/screenshot-gallery'
-import { createClient } from '@/lib/supabase/server'
-import { recordAppView } from '@/lib/analytics/record-event'
 
-type Props = {
-  params: Promise<{ slug: string }>
-}
+type Props = { params: Promise<{ slug: string }> }
 
-export async function generateMetadata({ params }: Props) {
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   const app = await getAppBySlug(slug)
   if (!app) return {}
-  return { title: app.name, description: app.description }
+
+  const url = `${siteUrl}/apps/${app.slug}`
+
+  return {
+    title: app.name,
+    description: app.description,
+    alternates: { canonical: url },
+    openGraph: {
+      title: app.name,
+      description: app.description,
+      url,
+      siteName: 'Rimba ID',
+      images: app.logo_url ? [{ url: app.logo_url }] : [],
+      locale: 'id_ID',
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary',
+      title: app.name,
+      description: app.description,
+      images: app.logo_url ? [app.logo_url] : [],
+    },
+  }
 }
 
 export default async function AppDetailPage({ params }: Props) {
@@ -32,14 +56,14 @@ export default async function AppDetailPage({ params }: Props) {
     notFound()
   }
 
+  // Cek admin dilakukan DI SINI (bukan di dalam after()) karena cookies()
+  // tidak boleh dipanggil di dalam after() -- ini juga sebabnya halaman
+  // ini tetap dynamic (lihat 11.1).
   const supabase = await createClient()
   const {
     data: { user: viewer },
   } = await supabase.auth.getUser()
 
-  // Jangan hitung kunjungan admin sendiri sebagai "view" publik.
-  // after() menjalankan ini SETELAH respons dikirim ke browser,
-  // jadi tidak menambah waktu tunggu halaman sama sekali.
   if (!viewer) {
     after(() =>
       recordAppView(app.id).catch((err) => console.error('[recordAppView] gagal:', err))
@@ -52,14 +76,38 @@ export default async function AppDetailPage({ params }: Props) {
     getAppRecommendations(app.id),
   ])
 
+  const nonce = (await headers()).get('x-nonce') ?? undefined
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: app.name,
+    description: app.description,
+    ...(app.version ? { softwareVersion: app.version } : {}),
+    ...(app.logo_url ? { image: app.logo_url } : {}),
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'IDR' },
+  }
+
   return (
     <main className="mx-auto max-w-3xl px-4 py-10 sm:py-14">
+      <script
+        type="application/ld+json"
+        nonce={nonce}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+
       <section className="flex flex-col gap-6 sm:flex-row sm:items-start">
         <div className="relative mx-auto h-28 w-28 shrink-0 overflow-hidden rounded-2xl border border-border bg-muted sm:mx-0">
           {app.logo_url ? (
-            <Image src={app.logo_url} alt={`Logo ${app.name}`} fill className="object-cover" sizes="112px" />
+            <Image
+              src={app.logo_url}
+              alt={`Logo ${app.name}`}
+              fill
+              className="object-cover"
+              sizes="112px"
+              priority
+            />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-3xl font-semibold text-muted-foreground">
+            <div className="flex h-full w-full items-center justify-center font-display text-3xl text-muted-foreground">
               {app.name.charAt(0).toUpperCase()}
             </div>
           )}
@@ -89,7 +137,7 @@ export default async function AppDetailPage({ params }: Props) {
       </section>
 
       <section className="mt-10">
-        <h2 className="mb-3 text-lg font-semibold">Deskripsi</h2>
+        <h2 className="mb-3 font-display text-lg font-semibold">Deskripsi</h2>
         <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
           {app.description}
         </p>
@@ -97,7 +145,7 @@ export default async function AppDetailPage({ params }: Props) {
 
       {screenshots.length > 0 && (
         <section className="mt-10">
-          <h2 className="mb-3 text-lg font-semibold">Screenshot</h2>
+          <h2 className="mb-3 font-display text-lg font-semibold">Screenshot</h2>
           <ScreenshotGallery screenshots={screenshots} appName={app.name} />
         </section>
       )}

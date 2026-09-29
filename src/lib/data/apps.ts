@@ -1,10 +1,14 @@
+// src/lib/data/apps.ts
 import { createClient } from '@/lib/supabase/server'
+import { createPublicClient } from '@/lib/supabase/public'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export const HOME_GRID_LIMIT = 6
 
+// --- Query publik (tanpa cookies -- halaman yang memakainya bisa di-cache) ---
+
 export async function getNewUpdateApp() {
-  const supabase = await createClient()
+  const supabase = createPublicClient()
   const { data } = await supabase
     .from('apps')
     .select('id, name, slug, logo_url, description, version')
@@ -16,7 +20,7 @@ export async function getNewUpdateApp() {
 }
 
 export async function getHomeGridApps(excludeId?: string) {
-  const supabase = await createClient()
+  const supabase = createPublicClient()
   let query = supabase
     .from('apps')
     .select('id, name, slug, logo_url, description, version', { count: 'exact' })
@@ -33,7 +37,7 @@ export async function getHomeGridApps(excludeId?: string) {
 }
 
 export async function getAllPublishedApps() {
-  const supabase = await createClient()
+  const supabase = createPublicClient()
   const { data } = await supabase
     .from('apps')
     .select('id, name, slug, logo_url, description, version')
@@ -44,7 +48,7 @@ export async function getAllPublishedApps() {
 }
 
 export async function getAppBySlug(slug: string) {
-  const supabase = await createClient()
+  const supabase = createPublicClient()
   const { data } = await supabase
     .from('apps')
     .select('id, name, slug, logo_url, description, version, size_label')
@@ -55,22 +59,8 @@ export async function getAppBySlug(slug: string) {
   return data
 }
 
-export async function getDownloadButtonLabels(appId: string) {
-  // PENTING: pakai admin client karena RLS Fase 2 sengaja memblokir anon
-  // membaca tabel download_buttons sama sekali. Kita HANYA select kolom
-  // aman (id, label) — TIDAK PERNAH menyertakan kolom `url` di sini.
-  const supabase = createAdminClient()
-  const { data } = await supabase
-    .from('download_buttons')
-    .select('id, label')
-    .eq('app_id', appId)
-    .order('sort_order', { ascending: true })
-
-  return data ?? []
-}
-
 export async function getAppScreenshots(appId: string) {
-  const supabase = await createClient()
+  const supabase = createPublicClient()
   const { data } = await supabase
     .from('app_screenshots')
     .select('id, image_url')
@@ -81,7 +71,7 @@ export async function getAppScreenshots(appId: string) {
 }
 
 export async function getAppRecommendations(appId: string) {
-  const supabase = await createClient()
+  const supabase = createPublicClient()
 
   const { data: links } = await supabase
     .from('app_recommendations')
@@ -101,12 +91,27 @@ export async function getAppRecommendations(appId: string) {
 
   if (!apps) return []
 
-  // Urutkan kembali sesuai sort_order yang diatur admin, bukan urutan hasil query
   const appsById = new Map(apps.map((app) => [app.id, app]))
   return ids
     .map((id) => appsById.get(id))
     .filter((app): app is NonNullable<typeof app> => app !== undefined)
 }
+
+export async function getDownloadButtonLabels(appId: string) {
+  // PENTING: pakai admin client karena RLS Fase 2 sengaja memblokir anon
+  // membaca tabel download_buttons sama sekali. Kita HANYA select kolom
+  // aman (id, label) -- TIDAK PERNAH menyertakan kolom `url` di sini.
+  const supabase = createAdminClient()
+  const { data } = await supabase
+    .from('download_buttons')
+    .select('id, label')
+    .eq('app_id', appId)
+    .order('sort_order', { ascending: true })
+
+  return data ?? []
+}
+
+// --- Query admin (butuh sesi login, memakai cookie-aware client) ---
 
 export async function getAdminAppsList() {
   const supabase = await createClient()

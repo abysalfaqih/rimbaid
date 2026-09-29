@@ -1,9 +1,11 @@
 import { headers } from 'next/headers'
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import type { ReactNode } from 'react'
 import { Fraunces, Work_Sans } from 'next/font/google'
 import { ThemeProvider } from '@/components/theme-provider'
 import './globals.css'
+
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
 
 const fraunces = Fraunces({
   subsets: ['latin'],
@@ -18,11 +20,19 @@ const workSans = Work_Sans({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: {
     default: 'Rimba ID — Aplikasi buatan sendiri',
     template: '%s — Rimba ID',
   },
   description: 'Kumpulan aplikasi yang saya buat sendiri, tersedia untuk diunduh.',
+}
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#eef0e9' },
+    { media: '(prefers-color-scheme: dark)', color: '#101712' },
+  ],
 }
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
