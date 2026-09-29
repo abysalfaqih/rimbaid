@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { VERIFICATION_STEPS } from '@/lib/constants/verification'
+import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit'
+import { isTrustedOrigin } from '@/lib/security/origin'
 
 const bodySchema = z.object({
   sessionId: z.string().uuid(),
@@ -9,6 +11,16 @@ const bodySchema = z.object({
 })
 
 export async function POST(request: NextRequest) {
+  if (!isTrustedOrigin(request)) {
+    return NextResponse.json({ error: 'Origin tidak diizinkan' }, { status: 403 })
+  }
+
+  const ip = getClientIp(request)
+  const allowed = await checkRateLimit(`verify-step:${ip}`, 60, 600)
+  if (!allowed) {
+    return NextResponse.json({ error: 'Terlalu banyak percobaan, coba lagi nanti' }, { status: 429 })
+  }
+
   const json = await request.json().catch(() => null)
   const parsed = bodySchema.safeParse(json)
 

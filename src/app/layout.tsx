@@ -1,3 +1,4 @@
+import { headers } from 'next/headers'
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import { Fraunces, Work_Sans } from 'next/font/google'
@@ -24,11 +25,19 @@ export const metadata: Metadata = {
   description: 'Kumpulan aplikasi yang saya buat sendiri, tersedia untuk diunduh.',
 }
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const nonce = (await headers()).get('x-nonce') ?? undefined
+
   return (
     <html lang="id" suppressHydrationWarning>
       <body className={`${fraunces.variable} ${workSans.variable} font-sans antialiased`}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+          nonce={nonce}
+        >
           {children}
         </ThemeProvider>
       </body>

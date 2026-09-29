@@ -1,4 +1,4 @@
-// src/lib/supabase/admin.ts
+import 'server-only'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/types/database.types'
 
