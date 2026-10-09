@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import Image from 'next/image'
 import { Eye, Download, TrendingUp } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { TrafficChart, type TrafficPoint } from './traffic-chart'
 
 type AppRow = {
   id: string
@@ -25,16 +26,17 @@ type EventRow = {
 export function RealtimeDashboard({
   initialApps,
   initialEvents,
+  initialTraffic,
 }: {
   initialApps: AppRow[]
   initialEvents: EventRow[]
+  initialTraffic: TrafficPoint[]
 }) {
   const [apps, setApps] = useState(initialApps)
   const [events, setEvents] = useState(initialEvents)
+  const [traffic, setTraffic] = useState(initialTraffic)
   const [isLive, setIsLive] = useState(false)
 
-  // Dipakai agar handler event (dibuat sekali di bawah) selalu bisa
-  // membaca daftar aplikasi TERBARU, bukan closure basi dari render pertama.
   const appsRef = useRef(apps)
   useEffect(() => {
     appsRef.current = apps
@@ -45,29 +47,41 @@ export function RealtimeDashboard({
 
     const channel = supabase
       .channel('admin-dashboard')
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'apps' },
-        (payload) => {
-          const updated = payload.new as AppRow
-          setApps((prev) => prev.map((app) => (app.id === updated.id ? { ...app, ...updated } : app)))
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'app_events' },
-        (payload) => {
-          const row = payload.new as { id: string; app_id: string; event_type: 'view' | 'download'; created_at: string }
-          const appMatch = appsRef.current.find((a) => a.id === row.app_id)
-          const newEvent: EventRow = {
-            id: row.id,
-            event_type: row.event_type,
-            created_at: row.created_at,
-            apps: appMatch ? { name: appMatch.name, slug: appMatch.slug } : null,
-          }
-          setEvents((prev) => [newEvent, ...prev].slice(0, 20))
-        }
-      )
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'apps' }, (payload) => {
+        const updated = payload.new as AppRow
+        setApps((prev) => prev.map((app) => (app.id === updated.id ? { ...app, ...updated } : app)))
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'app_events' }, (payload) => {
+        const row = payload.new as { id: string; app_id: string; event_type: 'view' | 'download'; created_at: string }
+        const appMatch = appsRef.current.find((a) => a.id === row.app_id)
+
+        setEvents((prev) =>
+          [
+            {
+              id: row.id,
+              event_type: row.event_type,
+              created_at: row.created_at,
+              apps: appMatch ? { name: appMatch.name, slug: appMatch.slug } : null,
+            },
+            ...prev,
+          ].slice(0, 20)
+        )
+
+        // Naikkan titik "hari ini" di grafik (tanggal dihitung dalam WIB,
+        // sama dengan cara fungsi SQL get_daily_traffic mengelompokkan hari)
+        const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date())
+        setTraffic((prev) =>
+          prev.map((point) =>
+            point.day === today
+              ? {
+                  ...point,
+                  views: point.views + (row.event_type === 'view' ? 1 : 0),
+                  downloads: point.downloads + (row.event_type === 'download' ? 1 : 0),
+                }
+              : point
+          )
+        )
+      })
       .subscribe((status) => setIsLive(status === 'SUBSCRIBED'))
 
     return () => {
@@ -81,9 +95,9 @@ export function RealtimeDashboard({
   const sortedApps = [...apps].sort((a, b) => b.total_views - a.total_views)
 
   return (
-    <div className="space-y-8 p-8">
+    <div className="mx-auto max-w-5xl space-y-8 px-4 py-8 sm:py-10">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
+        <h1 className="font-display text-2xl font-semibold">Dashboard</h1>
         <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <span className={`size-2 rounded-full ${isLive ? 'bg-green-500' : 'bg-muted-foreground/40'}`} />
           {isLive ? 'Live' : 'Menghubungkan...'}
@@ -95,6 +109,8 @@ export function RealtimeDashboard({
         <StatCard icon={<Download className="size-5" />} label="Total Downloads" value={totalDownloads} />
         <StatCard icon={<TrendingUp className="size-5" />} label="Conversion Rate" value={`${conversionRate}%`} />
       </div>
+
+      <TrafficChart data={traffic} />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="overflow-hidden rounded-xl border border-border lg:col-span-2">

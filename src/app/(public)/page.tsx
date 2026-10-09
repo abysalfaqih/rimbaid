@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { getNewUpdateApp, getHomeGridApps } from '@/lib/data/apps'
 import { NewUpdateBanner } from '@/components/public/new-update-banner'
-import { AppCard } from '@/components/public/app-card'
+import { AppTile } from '@/components/public/app-tile'
 import { Button } from '@/components/ui/button'
 
 export default async function HomePage() {
@@ -10,7 +10,7 @@ export default async function HomePage() {
   const hasMore = count > apps.length
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-10 sm:py-14">
+    <main className="mx-auto max-w-5xl px-4 py-10 sm:py-14">
       {newUpdateApp && (
         <section className="mb-10 border-b border-border pb-10">
           <NewUpdateBanner
@@ -31,15 +31,15 @@ export default async function HomePage() {
             Belum ada aplikasi di sini. Aplikasi pertama akan segera hadir.
           </p>
         ) : (
-          <div className="mt-2 divide-y divide-border">
+          <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
             {apps.map((app) => (
-              <AppCard key={app.id} {...app} logoUrl={app.logo_url} />
+              <AppTile key={app.id} slug={app.slug} name={app.name} logoUrl={app.logo_url} />
             ))}
           </div>
         )}
 
         {hasMore && (
-          <div className="mt-6 flex justify-center">
+          <div className="mt-10 flex justify-center">
             <Button asChild variant="outline">
               <Link href="/apps">Lihat semua aplikasi</Link>
             </Button>

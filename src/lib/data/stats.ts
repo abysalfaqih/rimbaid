@@ -25,3 +25,18 @@ export async function getRecentEvents(limit = 20) {
     apps: Array.isArray(event.apps) ? (event.apps[0] ?? null) : (event.apps ?? null),
   }))
 }
+
+export async function getDailyTraffic(days = 30) {
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc('get_daily_traffic', { p_days: days })
+
+  if (error) {
+    console.error('[getDailyTraffic] gagal:', error)
+  }
+
+  return (data ?? []).map((row) => ({
+    day: String(row.day),
+    views: Number(row.views),
+    downloads: Number(row.downloads),
+  }))
+}

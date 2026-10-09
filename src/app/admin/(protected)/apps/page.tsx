@@ -9,7 +9,7 @@ export default async function AdminAppsPage() {
   const apps = await getAdminAppsList()
 
   return (
-    <div className="p-8">
+      <div className="mx-auto max-w-5xl px-4 py-8 sm:py-10">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Kelola Aplikasi</h1>
         <Button asChild><Link href="/admin/apps/new">Tambah Aplikasi</Link></Button>

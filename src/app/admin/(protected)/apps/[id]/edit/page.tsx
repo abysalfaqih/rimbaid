@@ -15,8 +15,8 @@ export default async function EditAppPage({ params }: Props) {
   const boundUpdateApp = updateApp.bind(null, id)
 
   return (
-    <div className="p-8">
-      <h1 className="mb-6 text-2xl font-semibold">Edit Aplikasi</h1>
+    <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:py-12">
+      <h1 className="mb-8 font-display text-2xl font-semibold">Edit Aplikasi</h1>
       <AppForm
         action={boundUpdateApp}
         recommendationOptions={recommendationOptions}

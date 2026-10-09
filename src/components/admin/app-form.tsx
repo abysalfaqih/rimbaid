@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { startTransition, useActionState, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -75,11 +75,13 @@ export function AppForm({
       if (s.kind === 'new') formData.set(`screenshotFile:${s.tempKey}`, s.file)
     })
 
-    formAction(formData)
+    startTransition(() => {
+      formAction(formData)
+    })
   }
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-2xl space-y-8">
+      <form onSubmit={handleSubmit} className="w-full space-y-8">
       <div className="space-y-2">
         <Label htmlFor="name">Nama Aplikasi</Label>
         <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />

@@ -1,9 +1,12 @@
-import { getDashboardSummary, getRecentEvents } from '@/lib/data/stats'
+import { getDashboardSummary, getRecentEvents, getDailyTraffic } from '@/lib/data/stats'
 import { RealtimeDashboard } from '@/components/admin/realtime-dashboard'
 
 export default async function DashboardPage() {
-  const { apps } = await getDashboardSummary()
-  const events = await getRecentEvents()
+  const [{ apps }, events, traffic] = await Promise.all([
+    getDashboardSummary(),
+    getRecentEvents(),
+    getDailyTraffic(30),
+  ])
 
-  return <RealtimeDashboard initialApps={apps} initialEvents={events} />
+  return <RealtimeDashboard initialApps={apps} initialEvents={events} initialTraffic={traffic} />
 }
