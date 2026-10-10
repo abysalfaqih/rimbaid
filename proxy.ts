@@ -38,7 +38,8 @@ export async function proxy(request: NextRequest) {
   supabaseResponse.headers.set('X-Content-Type-Options', 'nosniff')
   supabaseResponse.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
   supabaseResponse.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
-  supabaseResponse.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload')
+  supabaseResponse.headers.set('Strict-Transport-Security', 'max-age=31536000')
+  // supabaseResponse.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload')
 
   return supabaseResponse
 }

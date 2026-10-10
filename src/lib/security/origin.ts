@@ -1,15 +1,18 @@
 import 'server-only'
 
-// Mencegah situs LAIN memanggil API verifikasi kita langsung dari browser
-// pengunjung mereka. Bukan proteksi CSRF penuh (endpoint ini memang publik/
-// tanpa sesi), tapi menutup jalur penyalahgunaan lintas-situs yang murah.
+// Mencegah situs LAIN memanggil API verifikasi kita dari browser pengunjung
+// mereka. Origin request harus sama dengan host yang sedang melayani request
+// ini, jadi tidak bergantung pada env var dan aman untuk banyak domain
+// (domain utama, *.vercel.app, preview).
 export function isTrustedOrigin(request: Request) {
   const origin = request.headers.get('origin')
   if (!origin) return true // navigasi langsung/non-browser, divalidasi logika sesi sendiri
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
-  if (!siteUrl) return true
+
+  const host = request.headers.get('host') ?? request.headers.get('x-forwarded-host')
+  if (!host) return false
+
   try {
-    return new URL(origin).host === new URL(siteUrl).host
+    return new URL(origin).host === host
   } catch {
     return false
   }
