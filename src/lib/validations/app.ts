@@ -20,7 +20,20 @@ export const appDetailsSchema = z.object({
     .array(downloadButtonSchema)
     .min(1, 'Minimal 1 tombol download')
     .max(MAX_DOWNLOAD_BUTTONS, `Maksimal ${MAX_DOWNLOAD_BUTTONS} tombol download`),
-  recommendedAppIds: z.array(z.string().uuid()).max(MAX_RECOMMENDATIONS, `Maksimal ${MAX_RECOMMENDATIONS} rekomendasi`),
+  recommendedAppIds: z
+    .array(z.string().uuid())
+    .max(MAX_RECOMMENDATIONS, `Maksimal ${MAX_RECOMMENDATIONS} rekomendasi`),
+})
+
+// Payload lengkap yang dikirim form ke Server Action: detail + URL gambar
+// (gambar sendiri sudah diunggah langsung dari browser ke Supabase Storage)
+export const appPayloadSchema = appDetailsSchema.extend({
+  appId: z.string().uuid(),
+  logoUrl: z.string().url().nullable(),
+  screenshotUrls: z
+    .array(z.string().url())
+    .max(MAX_SCREENSHOTS, `Maksimal ${MAX_SCREENSHOTS} screenshot`),
 })
 
 export type AppDetailsInput = z.infer<typeof appDetailsSchema>
+export type AppPayload = z.infer<typeof appPayloadSchema>

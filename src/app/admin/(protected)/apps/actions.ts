@@ -2,39 +2,15 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { z } from 'zod'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { requireAdmin } from '@/lib/auth/require-admin'
-import { appDetailsSchema, MAX_SCREENSHOTS } from '@/lib/validations/app'
+import { appPayloadSchema, type AppPayload } from '@/lib/validations/app'
 import { slugify } from '@/lib/utils/slug'
-import { uploadAppImage, deleteAppImage } from '@/lib/storage/app-images'
+import { deleteAppImage, isOwnStorageUrl } from '@/lib/storage/app-images'
 import type { Database } from '@/lib/types/database.types'
 
 export type ActionState = { error?: string }
-
-const screenshotMetaSchema = z
-  .array(
-    z.union([
-      z.object({ kind: z.literal('existing'), id: z.string().uuid() }),
-      z.object({ kind: z.literal('new'), tempKey: z.string() }),
-    ])
-  )
-  .max(MAX_SCREENSHOTS, `Maksimal ${MAX_SCREENSHOTS} screenshot`)
-
-function parseAppFormData(formData: FormData) {
-  const raw = {
-    name: String(formData.get('name') ?? ''),
-    description: String(formData.get('description') ?? ''),
-    sizeLabel: String(formData.get('sizeLabel') ?? '') || undefined,
-    version: String(formData.get('version') ?? '') || undefined,
-    isPublished: formData.get('isPublished') === 'true',
-    isNewUpdate: formData.get('isNewUpdate') === 'true',
-    downloadButtons: JSON.parse(String(formData.get('downloadButtons') ?? '[]')),
-    recommendedAppIds: JSON.parse(String(formData.get('recommendedAppIds') ?? '[]')),
-  }
-  return appDetailsSchema.parse(raw)
-}
 
 async function generateUniqueSlug(supabase: SupabaseClient<Database>, name: string) {
   const base = slugify(name) || 'aplikasi'
@@ -47,6 +23,29 @@ async function generateUniqueSlug(supabase: SupabaseClient<Database>, name: stri
     candidate = `${base}-${suffix}`
   }
   throw new Error('Gagal membuat slug unik, coba nama lain')
+}
+
+// URL gambar hanya diterima kalau (a) sudah tersimpan di DB sebelumnya
+// (mis. data lama) atau (b) berasal dari folder storage milik aplikasi ini.
+function checkImageOwnership(
+  values: AppPayload,
+  existing: { logoUrl: string | null; screenshotUrls: string[] }
+): string | null {
+  if (
+    values.logoUrl &&
+    values.logoUrl !== existing.logoUrl &&
+    !isOwnStorageUrl(values.logoUrl, 'app-logos', values.appId)
+  ) {
+    return 'URL logo tidak valid'
+  }
+
+  const known = new Set(existing.screenshotUrls)
+  for (const url of values.screenshotUrls) {
+    if (!known.has(url) && !isOwnStorageUrl(url, 'app-screenshots', values.appId)) {
+      return 'URL screenshot tidak valid'
+    }
+  }
+  return null
 }
 
 async function syncDownloadButtons(
@@ -69,84 +68,86 @@ async function syncRecommendations(supabase: SupabaseClient<Database>, appId: st
   if (error) throw new Error(`Gagal menyimpan rekomendasi: ${error.message}`)
 }
 
-async function syncScreenshots(supabase: SupabaseClient<Database>, appId: string, formData: FormData) {
-  const metaRaw = JSON.parse(String(formData.get('screenshotsMeta') ?? '[]'))
-  const meta = screenshotMetaSchema.parse(metaRaw)
+async function syncScreenshots(supabase: SupabaseClient<Database>, appId: string, urls: string[]) {
+  const { data: existing } = await supabase.from('app_screenshots').select('id, image_url').eq('app_id', appId)
+  const existingRows = existing ?? []
 
-  const { data: existingRows } = await supabase
-    .from('app_screenshots')
-    .select('id, image_url')
-    .eq('app_id', appId)
+  const keep = new Set(urls)
+  const toDelete = existingRows.filter((row) => !keep.has(row.image_url))
 
-  const keptIds = new Set(meta.filter((m) => m.kind === 'existing').map((m) => m.id))
-  const toDelete = (existingRows ?? []).filter((row) => !keptIds.has(row.id))
-
-  for (const row of toDelete) {
-    await deleteAppImage(supabase, 'app-screenshots', row.image_url)
-  }
   if (toDelete.length > 0) {
     await supabase.from('app_screenshots').delete().in('id', toDelete.map((r) => r.id))
+    for (const row of toDelete) {
+      await deleteAppImage(supabase, 'app-screenshots', row.image_url)
+    }
   }
 
-  for (let index = 0; index < meta.length; index++) {
-    const item = meta[index]
-    if (item.kind === 'existing') {
-      await supabase.from('app_screenshots').update({ sort_order: index }).eq('id', item.id)
+  const idByUrl = new Map(existingRows.map((row) => [row.image_url, row.id]))
+
+  for (let index = 0; index < urls.length; index++) {
+    const url = urls[index]
+    const existingId = idByUrl.get(url)
+
+    if (existingId) {
+      await supabase.from('app_screenshots').update({ sort_order: index }).eq('id', existingId)
     } else {
-      const file = formData.get(`screenshotFile:${item.tempKey}`)
-      if (!(file instanceof File)) continue
-      const imageUrl = await uploadAppImage(supabase, 'app-screenshots', appId, file)
-      const { error } = await supabase.from('app_screenshots').insert({ app_id: appId, image_url: imageUrl, sort_order: index })
+      const { error } = await supabase
+        .from('app_screenshots')
+        .insert({ app_id: appId, image_url: url, sort_order: index })
       if (error) throw new Error(`Gagal menyimpan screenshot: ${error.message}`)
     }
   }
 }
 
-export async function createApp(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+async function applyNewUpdateFlag(supabase: SupabaseClient<Database>, appId: string, isNewUpdate: boolean) {
+  const { error } = isNewUpdate
+    ? await supabase.rpc('set_new_update_app', { target_app_id: appId })
+    : await supabase.rpc('clear_new_update_app', { target_app_id: appId })
+  if (error) throw new Error(`Gagal mengatur New Update: ${error.message}`)
+}
+
+export async function createApp(_prevState: ActionState, payload: AppPayload): Promise<ActionState> {
   await requireAdmin()
   const supabase = await createClient()
 
-  let values
-  try {
-    values = parseAppFormData(formData)
-  } catch (err) {
-    return { error: err instanceof Error ? err.message : 'Data tidak valid' }
+  const parsed = appPayloadSchema.safeParse(payload)
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? 'Data tidak valid' }
   }
+  const values = parsed.data
+
+  const ownershipError = checkImageOwnership(values, { logoUrl: null, screenshotUrls: [] })
+  if (ownershipError) return { error: ownershipError }
 
   const slug = await generateUniqueSlug(supabase, values.name)
 
-  const { data: newApp, error: insertError } = await supabase
-    .from('apps')
-    .insert({
-      name: values.name,
-      slug,
-      description: values.description,
-      size_label: values.sizeLabel || null,
-      version: values.version || null,
-      is_published: values.isPublished,
-    })
-    .select('id')
-    .single()
+  const { error: insertError } = await supabase.from('apps').insert({
+    id: values.appId,
+    name: values.name,
+    slug,
+    description: values.description,
+    size_label: values.sizeLabel || null,
+    version: values.version || null,
+    logo_url: values.logoUrl,
+    is_published: values.isPublished,
+  })
 
-  if (insertError || !newApp) {
-    return { error: `Gagal membuat aplikasi: ${insertError?.message}` }
+  if (insertError) {
+    return { error: `Gagal membuat aplikasi: ${insertError.message}` }
   }
 
   try {
-    const logoFile = formData.get('logo')
-    if (logoFile instanceof File && logoFile.size > 0) {
-      const logoUrl = await uploadAppImage(supabase, 'app-logos', newApp.id, logoFile)
-      await supabase.from('apps').update({ logo_url: logoUrl }).eq('id', newApp.id)
-    }
-
-    await syncDownloadButtons(supabase, newApp.id, values.downloadButtons)
-    await syncRecommendations(supabase, newApp.id, values.recommendedAppIds)
-    await syncScreenshots(supabase, newApp.id, formData)
-
+    await syncDownloadButtons(supabase, values.appId, values.downloadButtons)
+    await syncRecommendations(supabase, values.appId, values.recommendedAppIds)
+    await syncScreenshots(supabase, values.appId, values.screenshotUrls)
     if (values.isNewUpdate) {
-      await supabase.rpc('set_new_update_app', { target_app_id: newApp.id })
+      await applyNewUpdateFlag(supabase, values.appId, true)
     }
   } catch (err) {
+    // Batalkan aplikasi yang setengah jadi (tabel anak ikut terhapus lewat
+    // on delete cascade). File gambar dibiarkan di Storage supaya percobaan
+    // simpan berikutnya dari form yang sama bisa memakainya ulang.
+    await supabase.from('apps').delete().eq('id', values.appId)
     return { error: err instanceof Error ? err.message : 'Gagal menyimpan detail aplikasi' }
   }
 
@@ -156,19 +157,34 @@ export async function createApp(_prevState: ActionState, formData: FormData): Pr
   redirect('/admin/apps')
 }
 
-export async function updateApp(appId: string, _prevState: ActionState, formData: FormData): Promise<ActionState> {
+export async function updateApp(
+  appId: string,
+  _prevState: ActionState,
+  payload: AppPayload
+): Promise<ActionState> {
   await requireAdmin()
   const supabase = await createClient()
 
-  let values
-  try {
-    values = parseAppFormData(formData)
-  } catch (err) {
-    return { error: err instanceof Error ? err.message : 'Data tidak valid' }
+  const parsed = appPayloadSchema.safeParse(payload)
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? 'Data tidak valid' }
   }
+  const values = { ...parsed.data, appId }
 
-  const { data: existingApp } = await supabase.from('apps').select('id, slug').eq('id', appId).maybeSingle()
+  const { data: existingApp } = await supabase
+    .from('apps')
+    .select('id, slug, logo_url')
+    .eq('id', appId)
+    .maybeSingle()
   if (!existingApp) return { error: 'Aplikasi tidak ditemukan' }
+
+  const { data: existingShots } = await supabase.from('app_screenshots').select('image_url').eq('app_id', appId)
+
+  const ownershipError = checkImageOwnership(values, {
+    logoUrl: existingApp.logo_url,
+    screenshotUrls: (existingShots ?? []).map((s) => s.image_url),
+  })
+  if (ownershipError) return { error: ownershipError }
 
   const { error: updateError } = await supabase
     .from('apps')
@@ -177,6 +193,7 @@ export async function updateApp(appId: string, _prevState: ActionState, formData
       description: values.description,
       size_label: values.sizeLabel || null,
       version: values.version || null,
+      logo_url: values.logoUrl,
       is_published: values.isPublished,
     })
     .eq('id', appId)
@@ -184,23 +201,17 @@ export async function updateApp(appId: string, _prevState: ActionState, formData
   if (updateError) return { error: `Gagal memperbarui aplikasi: ${updateError.message}` }
 
   try {
-    const logoFile = formData.get('logo')
-    if (logoFile instanceof File && logoFile.size > 0) {
-      const logoUrl = await uploadAppImage(supabase, 'app-logos', appId, logoFile)
-      await supabase.from('apps').update({ logo_url: logoUrl }).eq('id', appId)
-    }
-
     await syncDownloadButtons(supabase, appId, values.downloadButtons)
     await syncRecommendations(supabase, appId, values.recommendedAppIds)
-    await syncScreenshots(supabase, appId, formData)
-
-    if (values.isNewUpdate) {
-      await supabase.rpc('set_new_update_app', { target_app_id: appId })
-    } else {
-      await supabase.rpc('clear_new_update_app', { target_app_id: appId })
-    }
+    await syncScreenshots(supabase, appId, values.screenshotUrls)
+    await applyNewUpdateFlag(supabase, appId, values.isNewUpdate)
   } catch (err) {
     return { error: err instanceof Error ? err.message : 'Gagal menyimpan detail aplikasi' }
+  }
+
+  // Logo lama dibersihkan dari Storage hanya setelah semuanya berhasil tersimpan
+  if (existingApp.logo_url && existingApp.logo_url !== values.logoUrl) {
+    await deleteAppImage(supabase, 'app-logos', existingApp.logo_url)
   }
 
   revalidatePath('/')

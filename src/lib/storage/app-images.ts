@@ -4,25 +4,19 @@ import type { Database } from '@/lib/types/database.types'
 
 type Bucket = 'app-logos' | 'app-screenshots'
 
-export async function uploadAppImage(
-  supabase: SupabaseClient<Database>,
-  bucket: Bucket,
-  appId: string,
-  file: File
-) {
-  const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
-  const path = `${appId}/${crypto.randomUUID()}.${ext}`
-
-  const { error } = await supabase.storage.from(bucket).upload(path, file, {
-    contentType: file.type,
-  })
-  if (error) throw new Error(`Gagal upload gambar (${bucket}): ${error.message}`)
-
-  const { data } = supabase.storage.from(bucket).getPublicUrl(path)
-  return data.publicUrl
+// Memastikan URL gambar benar-benar berasal dari bucket kita, di folder
+// milik aplikasi ini -- bukan URL sembarang yang dikirim lewat payload.
+export function isOwnStorageUrl(url: string, bucket: Bucket, appId: string) {
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL
+  if (!base || url.includes('..')) return false
+  return url.startsWith(`${base}/storage/v1/object/public/${bucket}/${appId}/`)
 }
 
-export async function deleteAppImage(supabase: SupabaseClient<Database>, bucket: Bucket, publicUrl: string) {
+export async function deleteAppImage(
+  supabase: SupabaseClient<Database>,
+  bucket: Bucket,
+  publicUrl: string
+) {
   const marker = `/storage/v1/object/public/${bucket}/`
   const idx = publicUrl.indexOf(marker)
   if (idx === -1) return

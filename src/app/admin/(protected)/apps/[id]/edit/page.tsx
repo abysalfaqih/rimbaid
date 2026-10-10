@@ -21,6 +21,7 @@ export default async function EditAppPage({ params }: Props) {
         action={boundUpdateApp}
         recommendationOptions={recommendationOptions}
         initialData={{
+          id: app.id,
           name: app.name,
           slug: app.slug,
           description: app.description,

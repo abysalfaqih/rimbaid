@@ -1,6 +1,6 @@
 'use client'
 
-import { startTransition, useActionState, useState } from 'react'
+import { startTransition, useActionState, useRef, useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -11,9 +11,12 @@ import { LogoUploader } from './logo-uploader'
 import { DownloadButtonsField, type DownloadButtonItem } from './download-buttons-field'
 import { ScreenshotsField, type ScreenshotItem } from './screenshots-field'
 import { RecommendationsField } from './recommendations-field'
+import { appDetailsSchema, type AppPayload } from '@/lib/validations/app'
+import { uploadImageFromBrowser } from '@/lib/storage/upload-client'
 import type { ActionState } from '@/app/admin/(protected)/apps/actions'
 
 type AppFormInitialData = {
+  id: string
   name: string
   slug: string
   description: string
@@ -32,12 +35,16 @@ export function AppForm({
   initialData,
   recommendationOptions,
 }: {
-  action: (prevState: ActionState, formData: FormData) => Promise<ActionState>
+  action: (prevState: ActionState, payload: AppPayload) => Promise<ActionState>
   initialData?: AppFormInitialData
   recommendationOptions: { id: string; name: string }[]
 }) {
   const router = useRouter()
   const [state, formAction, isPending] = useActionState(action, {})
+
+  // Aplikasi baru: ID dibuat di browser supaya gambar bisa langsung diunggah
+  // ke folder <appId>/ sebelum barisnya ada di database.
+  const [appId] = useState(() => initialData?.id ?? crypto.randomUUID())
 
   const [name, setName] = useState(initialData?.name ?? '')
   const [description, setDescription] = useState(initialData?.description ?? '')
@@ -50,38 +57,76 @@ export function AppForm({
     initialData?.downloadButtons?.length ? initialData.downloadButtons : [{ label: '', url: '' }]
   )
   const [screenshots, setScreenshots] = useState<ScreenshotItem[]>(
-    (initialData?.screenshots ?? []).map((s) => ({ tempKey: s.id, kind: 'existing' as const, id: s.id, previewUrl: s.url }))
+    (initialData?.screenshots ?? []).map((s) => ({
+      tempKey: s.id,
+      kind: 'existing' as const,
+      id: s.id,
+      previewUrl: s.url,
+    }))
   )
   const [recommendedAppIds, setRecommendedAppIds] = useState<string[]>(initialData?.recommendedAppIds ?? [])
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    const formData = new FormData()
-    formData.set('name', name)
-    formData.set('description', description)
-    formData.set('sizeLabel', sizeLabel)
-    formData.set('version', version)
-    formData.set('isPublished', String(isPublished))
-    formData.set('isNewUpdate', String(isNewUpdate))
-    formData.set('downloadButtons', JSON.stringify(downloadButtons))
-    formData.set('recommendedAppIds', JSON.stringify(recommendedAppIds))
-    if (logoFile) formData.set('logo', logoFile)
+  const [isUploading, setIsUploading] = useState(false)
+  const [clientError, setClientError] = useState<string | null>(null)
 
-    const screenshotsMeta = screenshots.map((s) =>
-      s.kind === 'existing' ? { kind: 'existing', id: s.id } : { kind: 'new', tempKey: s.tempKey }
-    )
-    formData.set('screenshotsMeta', JSON.stringify(screenshotsMeta))
-    screenshots.forEach((s) => {
-      if (s.kind === 'new') formData.set(`screenshotFile:${s.tempKey}`, s.file)
-    })
+  // Mengingat file yang sudah terunggah, supaya menekan Simpan ulang setelah
+  // error tidak mengunggah file yang sama dua kali.
+  const uploadedRef = useRef(new Map<File, string>())
 
-    startTransition(() => {
-      formAction(formData)
-    })
+  async function uploadOnce(bucket: 'app-logos' | 'app-screenshots', file: File) {
+    const cached = uploadedRef.current.get(file)
+    if (cached) return cached
+    const url = await uploadImageFromBrowser(bucket, appId, file)
+    uploadedRef.current.set(file, url)
+    return url
   }
 
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    if (isUploading || isPending) return
+    setClientError(null)
+
+    // Validasi detail dulu SEBELUM mengunggah apapun
+    const details = appDetailsSchema.safeParse({
+      name,
+      description,
+      sizeLabel: sizeLabel || undefined,
+      version: version || undefined,
+      isPublished,
+      isNewUpdate,
+      downloadButtons,
+      recommendedAppIds,
+    })
+    if (!details.success) {
+      setClientError(details.error.issues[0]?.message ?? 'Data tidak valid')
+      return
+    }
+
+    setIsUploading(true)
+    try {
+      const logoUrl = logoFile ? await uploadOnce('app-logos', logoFile) : (initialData?.logoUrl ?? null)
+
+      const screenshotUrls = await Promise.all(
+        screenshots.map((s) => (s.kind === 'existing' ? s.previewUrl : uploadOnce('app-screenshots', s.file)))
+      )
+
+      const payload: AppPayload = { ...details.data, appId, logoUrl, screenshotUrls }
+
+      startTransition(() => {
+        formAction(payload)
+      })
+    } catch (err) {
+      setClientError(err instanceof Error ? err.message : 'Gagal mengunggah gambar')
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  const errorMessage = clientError ?? state.error
+  const isBusy = isUploading || isPending
+
   return (
-      <form onSubmit={handleSubmit} className="w-full space-y-8">
+    <form onSubmit={handleSubmit} className="w-full space-y-8">
       <div className="space-y-2">
         <Label htmlFor="name">Nama Aplikasi</Label>
         <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
@@ -108,7 +153,13 @@ export function AppForm({
 
       <div className="space-y-2">
         <Label htmlFor="description">Deskripsi</Label>
-        <Textarea id="description" rows={6} value={description} onChange={(e) => setDescription(e.target.value)} required />
+        <Textarea
+          id="description"
+          rows={6}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          required
+        />
       </div>
 
       <DownloadButtonsField value={downloadButtons} onChange={setDownloadButtons} />
@@ -131,13 +182,19 @@ export function AppForm({
         <Switch checked={isPublished} onCheckedChange={setIsPublished} />
       </div>
 
-      {state.error && (
-        <p className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{state.error}</p>
+      {errorMessage && (
+        <p className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+          {errorMessage}
+        </p>
       )}
 
       <div className="flex gap-3">
-        <Button type="submit" disabled={isPending}>{isPending ? 'Menyimpan...' : 'Simpan'}</Button>
-        <Button type="button" variant="outline" onClick={() => router.push('/admin/apps')}>Batal</Button>
+        <Button type="submit" disabled={isBusy}>
+          {isUploading ? 'Mengunggah gambar...' : isPending ? 'Menyimpan...' : 'Simpan'}
+        </Button>
+        <Button type="button" variant="outline" disabled={isBusy} onClick={() => router.push('/admin/apps')}>
+          Batal
+        </Button>
       </div>
     </form>
   )
