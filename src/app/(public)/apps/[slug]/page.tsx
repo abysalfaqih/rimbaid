@@ -35,15 +35,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: app.description,
       url,
       siteName: 'Rimba ID',
-      images: app.logo_url ? [{ url: app.logo_url }] : [],
       locale: 'id_ID',
       type: 'website',
+      ...(app.logo_url ? { images: [{ url: app.logo_url }] } : {}),
     },
     twitter: {
       card: 'summary',
       title: app.name,
       description: app.description,
-      images: app.logo_url ? [app.logo_url] : [],
+      ...(app.logo_url ? { images: [app.logo_url] } : {}),
     },
   }
 }
@@ -104,7 +104,8 @@ export default async function AppDetailPage({ params }: Props) {
               fill
               className="object-cover"
               sizes="112px"
-              priority
+              loading="eager"
+              fetchPriority="high"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center font-display text-3xl text-muted-foreground">

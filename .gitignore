@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+/catatan
 /.pnp
 .pnp.*
 .yarn/*

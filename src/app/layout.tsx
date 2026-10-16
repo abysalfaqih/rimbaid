@@ -1,31 +1,46 @@
 import { headers } from 'next/headers'
 import type { Metadata, Viewport } from 'next'
 import type { ReactNode } from 'react'
-import { Fraunces, Work_Sans } from 'next/font/google'
+import { Google_Sans, Roboto } from 'next/font/google'
 import { ThemeProvider } from '@/components/theme-provider'
 import './globals.css'
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
 
-const fraunces = Fraunces({
+const siteDescription =
+  'Unduh APK Mod terbaik untuk Android di Rimba ID. Kami menyediakan mod yang 100% berfungsi, aman, dan gratis untuk game-game populer. Tidak memerlukan root.'
+
+// Judul, tombol, nama aplikasi (seperti Play Store)
+const googleSans = Google_Sans({
   subsets: ['latin'],
-  variable: '--font-fraunces',
-  weight: ['400', '500', '600', '700'],
-  style: ['normal', 'italic'],
+  variable: '--font-google-sans',
+  fallback: ['system-ui', 'arial'],
 })
 
-const workSans = Work_Sans({
+// Teks isi (seperti Play Store)
+const roboto = Roboto({
   subsets: ['latin'],
-  variable: '--font-work-sans',
+  variable: '--font-roboto',
+  weight: ['400', '500', '700'],
 })
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: 'Rimba ID — Aplikasi buatan sendiri',
+    default: 'Rimba ID',
     template: '%s — Rimba ID',
   },
-  description: 'Kumpulan aplikasi yang saya buat sendiri, tersedia untuk diunduh.',
+  description: siteDescription,
+  openGraph: {
+    type: 'website',
+    siteName: 'Rimba ID',
+    locale: 'id_ID',
+    description: siteDescription,
+  },
+  twitter: {
+    card: 'summary_large_image',
+    description: siteDescription,
+  },
 }
 
 export const viewport: Viewport = {
@@ -40,7 +55,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
 
   return (
     <html lang="id" suppressHydrationWarning>
-      <body className={`${fraunces.variable} ${workSans.variable} font-sans antialiased`}>
+      <body className={`${googleSans.variable} ${roboto.variable} font-sans antialiased`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

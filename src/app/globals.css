@@ -85,8 +85,8 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --font-display: var(--font-fraunces);
-  --font-sans: var(--font-work-sans);
+  --font-display: var(--font-google-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-roboto), ui-sans-serif, system-ui, sans-serif;
 }
 
 @layer base {

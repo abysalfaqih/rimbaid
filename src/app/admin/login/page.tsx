@@ -5,6 +5,7 @@ import { login, type LoginState } from './actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import Image from 'next/image'
 
 const initialState: LoginState = {}
 
@@ -14,9 +15,18 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm space-y-6 rounded-xl border p-8 shadow-sm">
-        <div className="space-y-1 text-center">
-          <h1 className="text-2xl font-semibold">Masuk ke Admin</h1>
-          <p className="text-sm text-muted-foreground">Rimba ID</p>
+        <div className="space-y-3 text-center">
+          <Image
+            src="/brand/logo-full.png"
+            alt=""
+            width={48}
+            height={64}
+            className="h-16 w-auto"
+          />
+          <div className="space-y-1">
+            <h1 className="font-display text-2xl font-semibold">Masuk ke Admin</h1>
+            <p className="text-sm text-muted-foreground">Rimba ID</p>
+          </div>
         </div>
 
         <form action={formAction} className="space-y-4">

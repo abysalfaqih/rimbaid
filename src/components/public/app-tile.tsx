@@ -5,9 +5,11 @@ type AppTileProps = {
   slug: string
   name: string
   logoUrl: string | null
+  /** true untuk kotak yang terlihat di layar pertama (tidak ditunda pemuatannya) */
+  eager?: boolean
 }
 
-export function AppTile({ slug, name, logoUrl }: AppTileProps) {
+export function AppTile({ slug, name, logoUrl, eager = false }: AppTileProps) {
   return (
     <Link
       href={`/apps/${slug}`}
@@ -15,7 +17,14 @@ export function AppTile({ slug, name, logoUrl }: AppTileProps) {
     >
       <div className="relative size-24 overflow-hidden rounded-[22%] border border-border bg-muted">
         {logoUrl ? (
-          <Image src={logoUrl} alt={`Logo ${name}`} fill className="object-cover" sizes="96px" />
+          <Image
+            src={logoUrl}
+            alt={`Logo ${name}`}
+            fill
+            className="object-cover"
+            sizes="96px"
+            loading={eager ? 'eager' : undefined}
+          />
         ) : (
           <div className="flex h-full w-full items-center justify-center font-display text-3xl text-muted-foreground">
             {name.charAt(0).toUpperCase()}

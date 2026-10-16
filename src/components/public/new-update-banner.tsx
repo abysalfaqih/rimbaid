@@ -19,7 +19,15 @@ export function NewUpdateBanner({ slug, name, logoUrl, description, version }: N
       <div className="mt-4 flex items-start gap-4 sm:items-center">
         <div className="relative size-16 shrink-0 overflow-hidden rounded-lg border border-border bg-muted sm:size-20">
           {logoUrl ? (
-            <Image src={logoUrl} alt={`Logo ${name}`} fill className="object-cover" sizes="80px" />
+            <Image
+              src={logoUrl}
+              alt={`Logo ${name}`}
+              fill
+              className="object-cover"
+              sizes="80px"
+              loading="eager"
+              fetchPriority="high"
+            />
           ) : (
             <div className="flex h-full w-full items-center justify-center font-display text-2xl text-muted-foreground">
               {name.charAt(0).toUpperCase()}
