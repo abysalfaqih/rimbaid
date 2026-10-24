@@ -1,3 +1,17 @@
+# Pengaturan pnpm untuk Rimba ID.
+
+# Skrip build paket pihak ketiga diblokir secara bawaan.
+# Izinkan hanya yang benar-benar dibutuhkan (false = tetap diblokir).
 allowBuilds:
   sharp: false
   unrs-resolver: false
+
+# Pertahanan rantai pasok: jangan memasang versi paket yang dirilis kurang dari
+# 24 jam lalu (satuan: menit). Ini memberi waktu bagi registry untuk menarik paket
+# yang dibajak. Paket Next.js dikecualikan agar tambalan keamanan framework tidak
+# tertunda.
+minimumReleaseAge: 1440
+minimumReleaseAgeExclude:
+  - next
+  - "@next/*"
+  - eslint-config-next
