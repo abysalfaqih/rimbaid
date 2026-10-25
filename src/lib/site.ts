@@ -1,13 +1,14 @@
 import { publicEnv } from "@/lib/env/public";
 
-/** Konfigurasi situs yang dipakai bersama (metadata, sitemap, Open Graph, dan lain-lain). */
+/**
+ * Konfigurasi situs yang dipakai bersama (metadata, sitemap, Open Graph, dan lain-lain).
+ * Teks yang tampil ke pengunjung ada di `messages/*.json`, bukan di sini.
+ */
 export const siteConfig = {
   name: "Rimba ID",
   url: publicEnv.NEXT_PUBLIC_SITE_URL,
-  description: {
-    id: "Tempat berbagi aplikasi buatan sendiri. Temukan dan unduh aplikasi terbaru dari Rimba ID.",
-    en: "A home for apps built by one developer. Discover and download the latest apps from Rimba ID.",
-  },
+  /** Tahun pertama hak cipta. Tetap (bukan tahun berjalan) agar halaman bisa dirender statis. */
+  foundedYear: 2026,
 } as const;
 
 /** Membuat URL absolut dari path, contoh: absoluteUrl("/en/apps") */

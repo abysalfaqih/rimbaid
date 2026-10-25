@@ -1,0 +1,29 @@
+{
+  "Metadata": {
+    "homeTitle": "Rimba ID — Aplikasi Buatan Sendiri",
+    "description": "Rimba ID adalah tempat saya berbagi aplikasi buatan sendiri. Temukan dan unduh aplikasi terbaru di sini.",
+    "ogAlt": "Rimba ID: sosok bertopeng dengan mahkota emas"
+  },
+  "Common": {
+    "skipToContent": "Lewati ke konten utama"
+  },
+  "Header": {
+    "homeLabel": "Rimba ID, ke beranda",
+    "languageLabel": "Pilih bahasa"
+  },
+  "Footer": {
+    "copyright": "© {year} Rimba ID. Seluruh hak dilindungi."
+  },
+  "Home": {
+    "eyebrow": "Segera hadir",
+    "title": "Rumah bagi aplikasi buatan sendiri.",
+    "description": "Rimba ID sedang disiapkan. Tak lama lagi di sini: koleksi aplikasi yang saya bangun, masing-masing dengan unduhan yang terverifikasi.",
+    "imageAlt": "Maskot Rimba ID: sosok bertopeng hitam dengan mahkota emas dan jaket oranye"
+  },
+  "NotFound": {
+    "code": "Galat 404",
+    "title": "Halaman tidak ditemukan",
+    "description": "Alamat yang Anda buka tidak ada atau sudah dipindahkan.",
+    "back": "Kembali ke beranda"
+  }
+}

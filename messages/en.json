@@ -1,0 +1,29 @@
+{
+  "Metadata": {
+    "homeTitle": "Rimba ID — Self-Made Apps",
+    "description": "Rimba ID is where I share the apps I build myself. Discover and download the latest ones here.",
+    "ogAlt": "Rimba ID: a masked figure wearing a golden crown"
+  },
+  "Common": {
+    "skipToContent": "Skip to main content"
+  },
+  "Header": {
+    "homeLabel": "Rimba ID, go to home",
+    "languageLabel": "Choose language"
+  },
+  "Footer": {
+    "copyright": "© {year} Rimba ID. All rights reserved."
+  },
+  "Home": {
+    "eyebrow": "Coming soon",
+    "title": "A home for apps built from scratch.",
+    "description": "Rimba ID is being prepared. Soon here: the apps I build, each with a verified download.",
+    "imageAlt": "Rimba ID mascot: a figure in a black mask wearing a golden crown and an orange jacket"
+  },
+  "NotFound": {
+    "code": "Error 404",
+    "title": "Page not found",
+    "description": "The address you opened doesn't exist or has been moved.",
+    "back": "Back to home"
+  }
+}

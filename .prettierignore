@@ -4,3 +4,5 @@ pnpm-lock.yaml
 public
 next-env.d.ts
 *.tsbuildinfo
+# Dibuat ulang otomatis oleh `next dev`; tidak perlu diformat
+AGENTS.md

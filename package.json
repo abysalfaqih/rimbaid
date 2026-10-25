@@ -12,10 +12,16 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "pnpm typecheck && pnpm lint && pnpm format:check"
+    "i18n:check": "node scripts/check-messages.mjs",
+    "clean": "node scripts/clean.mjs .next",
+    "clean:types": "node scripts/clean.mjs .next/dev/types",
+    "check": "pnpm clean:types && pnpm i18n:check && pnpm typecheck && pnpm lint && pnpm format:check"
   },
   "dependencies": {
+    "@fontsource-variable/bricolage-grotesque": "^5.3.0",
+    "@fontsource-variable/plus-jakarta-sans": "^5.3.0",
     "next": "16.4.3",
+    "next-intl": "^4.14.9",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "server-only": "^0.0.1",

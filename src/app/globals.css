@@ -1,26 +1,116 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+ * DESIGN TOKEN RIMBA ID
+ * Warna diukur dari logo (emas #D9AD47, oranye #ED7006, rubi #CD3922) di atas hitam hangat.
+ * Semua pasangan teks/latar sudah dicek lolos WCAG AA (lihat docs/PROJECT_NOTES.md).
+ * Situs ini sengaja hanya bertema gelap, sesuai identitas logo.
+ */
+@theme {
+  /* Permukaan: dari yang terdalam ke yang paling terangkat */
+  --color-canvas: #0a0908;
+  --color-surface: #12100e;
+  --color-raised: #1a1714;
+  --color-overlay: #231f1b;
+  --color-line: #2c2722;
+  --color-line-strong: #433c33;
+
+  /* Teks */
+  --color-fg: #f6f1e7;
+  --color-fg-muted: #b3ab9b;
+  --color-fg-faint: #8a8272;
+
+  /* Aksen */
+  --color-gold: #d9ad47;
+  --color-gold-hi: #f0cf7e;
+  --color-gold-lo: #a98129;
+  --color-flame: #ed7006;
+  --color-ruby: #cd3922;
+  --color-danger: #ff7a66;
 }
 
+/* Font: nilainya merujuk variabel dari next/font (lihat src/lib/fonts.ts) */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans:
+    var(--font-face-body), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display:
+    var(--font-face-display), var(--font-face-body), ui-sans-serif, system-ui, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* Lebar konten + gutter yang sama untuk header, isi, dan footer */
+@utility container-page {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 72rem;
+  padding-inline: 1.25rem;
+
+  @media (min-width: 40rem) {
+    padding-inline: 2rem;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Cahaya hangat tipis di belakang sosok maskot */
+@utility hero-glow {
+  background-image:
+    radial-gradient(
+      55% 60% at 78% 38%,
+      color-mix(in oklab, var(--color-gold) 13%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      40% 45% at 88% 78%,
+      color-mix(in oklab, var(--color-flame) 9%, transparent),
+      transparent 72%
+    );
+}
+
+/* Memudarkan tepi bawah gambar yang terpotong lurus (mis. maskot setengah badan) */
+@utility fade-bottom {
+  mask-image: linear-gradient(to bottom, #000 76%, transparent 100%);
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    background-color: var(--color-canvas);
+    /* header menempel di atas: beri ruang saat melompat ke anchor */
+    scroll-padding-top: 5rem;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-fg);
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display text-balance;
+  }
+
+  ::selection {
+    background-color: color-mix(in oklab, var(--color-gold) 35%, transparent);
+    color: var(--color-fg);
+  }
+
+  /* Indikator fokus keyboard yang jelas di semua elemen interaktif */
+  :focus-visible {
+    outline: 2px solid var(--color-gold);
+    outline-offset: 3px;
+    border-radius: 0.25rem;
+  }
+
+  /* Hormati pengguna yang mematikan animasi di sistem operasinya */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }

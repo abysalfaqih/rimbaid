@@ -5,6 +5,9 @@
 allowBuilds:
   sharp: false
   unrs-resolver: false
+  # Dependensi next-intl. Memakai binary siap pakai per platform, skrip build tidak dibutuhkan.
+  "@parcel/watcher": false
+  "@swc/core": false
 
 # Pertahanan rantai pasok: jangan memasang versi paket yang dirilis kurang dari
 # 24 jam lalu (satuan: menit). Ini memberi waktu bagi registry untuk menarik paket
