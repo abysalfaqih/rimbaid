@@ -12,7 +12,7 @@ import { z } from "zod";
  */
 const publicSchema = z.object({
   NEXT_PUBLIC_SITE_URL: z
-    .url({ error: "harus berupa URL lengkap, contoh: https://rimba-id.vercel.app" })
+    .url({ error: "harus berupa URL lengkap, contoh: https://rimbaid.vercel.app" })
     .transform((value) => value.replace(/\/+$/, ""))
     .refine((value) => new URL(value).origin === value, {
       error: "hanya boleh origin (tanpa path, query, atau slash di akhir)",
