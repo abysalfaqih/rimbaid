@@ -3,7 +3,7 @@
 > Berkas ini adalah memori proyek. Di awal setiap percakapan baru dengan asisten, tempel seluruh isinya.
 > Perbarui setiap kali sebuah fase selesai (bagian 8, 12, dan 14 paling sering berubah).
 
-Terakhir diperbarui: 2026-10-25 (Fase 1B selesai dikerjakan; menunggu checkpoint pemilik)
+Terakhir diperbarui: 2026-10-26 (Fase 2A selesai dikerjakan; menunggu checkpoint pemilik)
 
 ## 1. Ringkasan
 
@@ -33,6 +33,12 @@ SEO kuat, aman, dan mudah dirawat jangka panjang. Tidak ada kategori aplikasi. G
 - Footer memakai tahun tetap (`foundedYear` di `src/lib/site.ts`) karena halaman statis tidak boleh memakai tanggal berjalan.
 - CSP tanpa nonce (memakai `'unsafe-inline'` untuk script/style) agar halaman tetap bisa statis; ditinjau ulang di Fase 10.
 - Manifest, robots, sitemap, dan JSON-LD ditunda ke Fase 9.
+- Domain produksi: `https://rimbaid.vercel.app` (isi domain Anda yang sebenarnya jika berbeda).
+- URL bahasa (ID di `/`, EN di `/en`): dianggap disetujui pemilik (tidak ada keberatan setelah 1B).
+- Database: dua proyek Supabase Free di Singapura (ap-southeast-1): `rimba-id-dev` (lokal + deploy preview) dan `rimba-id-prod` (situs live). Fungsi Vercel di `sin1` (`vercel.json`).
+- Supabase Data API DIMATIKAN di kedua proyek; semua akses lewat server dengan koneksi Postgres langsung. Tinjau ulang bila Fase 8 butuh Realtime dari browser.
+- Koneksi aplikasi: Transaction pooler (port 6543), `prepare: false`, `max: 1`, TLS wajib untuk host non-lokal. Migrasi (Fase 2B) lewat Session pooler (port 5432 di host pooler), karena koneksi langsung hanya IPv6.
+- ORM: Drizzle 0.45.x (stabil), BUKAN 1.0 RC. Kode ditulis agar mudah naik ke 1.0: tanpa opsi `casing`, tanpa Relational Queries v1, nama kolom snake_case ditulis eksplisit. Tinjau saat 1.0 stabil.
 
 ## 4. Stack dan versi terkunci (dicek 2026-10-24)
 
@@ -45,6 +51,7 @@ SEO kuat, aman, dan mudah dirawat jangka panjang. Tidak ada kategori aplikasi. G
 - Font: Bricolage Grotesque (judul, varian opsz) dan Plus Jakarta Sans (teks), keduanya dari `@fontsource-variable/*`.
 - Next.js 16: `proxy.ts` menggantikan `middleware.ts`; `cacheComponents` dan `partialPrefetching` aktif; Turbopack bawaan.
 - pnpm 12: skrip build dependensi diblokir lewat `allowBuilds` di `pnpm-workspace.yaml` (paket baru yang punya skrip build harus dinyatakan di sana, kalau tidak muncul `ERR_PNPM_IGNORED_BUILDS`). `minimumReleaseAge: 1440` menolak paket yang dirilis kurang dari 24 jam.
+- drizzle-orm ^0.45.4 dan postgres ^3.4.9 (driver). drizzle-kit ditambahkan di Fase 2B
 
 ## 5. Struktur folder
 
@@ -69,6 +76,7 @@ rimba-id/
 ├─ next.config.ts                 header keamanan + plugin next-intl
 ├─ pnpm-workspace.yaml            pengaturan pnpm (allowBuilds, minimumReleaseAge)
 └─ .env.example                   contoh environment (tanpa rahasia)
+tambahkan ke struktur folder: src/db/ (client.ts = koneksi, health.ts = pengecekan) dan vercel.json (region + cron).
 ```
 
 ## 6. Environment variables
@@ -76,6 +84,7 @@ rimba-id/
 - `NEXT_PUBLIC_SITE_URL`: URL situs tanpa slash di akhir. Lokal `http://localhost:3000`; produksi URL asli (https). Divalidasi Zod saat build; salah format = build gagal. Nilainya ditanam saat build, jadi mengubahnya di Vercel WAJIB Redeploy.
 - Nilai rahasia (kunci API, password) TIDAK pernah ditempel di chat. Hanya nama variabelnya.
 - `.env.local` tidak boleh di-commit; hanya `.env.example`.
+- tambahkan: DATABASE_URL: URL Transaction pooler (rahasia). Lokal = proyek dev; Vercel Production = proyek prod; Vercel Preview = proyek dev. Di Vercel wajib port 6543 (divalidasi). Mengubah nilai di Vercel butuh deploy ulang.
 
 ## 7. Perintah harian
 
@@ -87,8 +96,10 @@ rimba-id/
 
 - [x] Fase 0: persiapan
 - [x] Fase 1A: fondasi (scaffold, tooling, header keamanan, validasi env)
-- [x] Fase 1B: bahasa, sistem desain, logo, kerangka halaman, deploy pertama (kode selesai; deploy menunggu checkpoint)
-- [ ] Fase 2: database (Supabase Postgres + Drizzle)
+- [x] Fase 1B: bahasa, sistem desain, logo, kerangka halaman, deploy pertama (lolos di komputer dan Vercel pemilik)
+- [ ] Fase 2: database.
+  [x] 2A koneksi + health check (menunggu checkpoint) ·
+  [ ] 2B skema + migrasi + RLS
 - [ ] Fase 3: login admin + MFA
 - [ ] Fase 4: CRUD admin + unggah gambar
 - [ ] Fase 5: halaman publik (beranda, daftar, detail)
@@ -131,7 +142,10 @@ Aturan: fase berikutnya dimulai hanya setelah pengecekan fase sebelumnya lolos d
 - Supabase paket gratis: proyek dijeda setelah 7 hari tanpa aktivitas, tidak ada backup harian, kuota penyimpanan dan transfer terbatas (cek ulang halaman resmi saat Fase 2).
 - Logo sumber beresolusi rendah (1800 px, hasil diperbesar); versi vektor akan menghasilkan ikon dan gambar OG yang lebih tajam.
 - Skor Lighthouse belum diukur.
-- Pengujian saya dilakukan di Linux; Windows dan Vercel diuji pemilik.
+- Pengujian asisten dilakukan di Linux dengan Node 22 (Postgres 16 asli untuk database); Node 24, Windows, Supabase, dan Vercel diuji pemilik
+- Supabase Free menjeda proyek yang aktivitasnya rendah selama 7 hari. Cron harian ke `/api/health` hanyalah mitigasi (belum terbukti dihitung sebagai aktivitas). Proyek prod yang dijeda = situs tidak bisa membaca data; pulihkan lewat dashboard.
+- ESLint 9.39.5 tidak lagi didukung; ESLint 10 belum didukung plugin eslint-config-next (import, jsx-a11y, react). Cek ulang tiap fase. Hanya alat dev.
+- TLS database: `require` (terenkripsi, tanpa verifikasi sertifikat); penguatan di Fase 10.
 
 ## 13. Aturan kerja
 
@@ -143,6 +157,7 @@ Aturan: fase berikutnya dimulai hanya setelah pengecekan fase sebelumnya lolos d
 
 ## 14. Changelog
 
+- 2026-10-26, Fase 2A: koneksi Supabase (Drizzle + postgres.js, transaction pooler, TLS), validasi `DATABASE_URL`, `/api/health` memeriksa database (503 jika gagal), region fungsi `sin1`, cron harian keep-alive.
 - 2026-10-25, perbaikan 1B: `[locale]/[...rest]/page.tsx` diberi `export const instant = false` (menghilangkan galat palsu validasi instan di mode dev; produksi tidak terpengaruh).
 - 2026-10-25, Fase 1B: next-intl (ID di `/`, EN di `/en`), sistem desain gelap, font self-host, logo/ikon/OG, header+footer, beranda sementara, 404 berbahasa, SEO per halaman, skrip `i18n:check` dan `clean`, `AGENTS.md` diabaikan Prettier.
 - 2026-10-24, Fase 1A: scaffold Next.js 16 + tooling, header keamanan, validasi environment, endpoint `/api/health`.
