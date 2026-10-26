@@ -19,5 +19,6 @@
     "**/app/**/error.tsx": "${dirname(1)}/${dirname} - error.tsx",
     "**/app/**/not-found.tsx": "${dirname(1)}/${dirname} - not-found.tsx",
     "**/app/**/route.ts": "${dirname(1)}/${dirname} - route.ts"
-  }
+  },
+  "i18n-ally.localesPaths": ["messages", "src/i18n"]
 }

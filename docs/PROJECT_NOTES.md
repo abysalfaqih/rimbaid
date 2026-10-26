@@ -143,6 +143,7 @@ Aturan: fase berikutnya dimulai hanya setelah pengecekan fase sebelumnya lolos d
 
 ## 14. Changelog
 
+- 2026-10-25, perbaikan 1B: `[locale]/[...rest]/page.tsx` diberi `export const instant = false` (menghilangkan galat palsu validasi instan di mode dev; produksi tidak terpengaruh).
 - 2026-10-25, Fase 1B: next-intl (ID di `/`, EN di `/en`), sistem desain gelap, font self-host, logo/ikon/OG, header+footer, beranda sementara, 404 berbahasa, SEO per halaman, skrip `i18n:check` dan `clean`, `AGENTS.md` diabaikan Prettier.
 - 2026-10-24, Fase 1A: scaffold Next.js 16 + tooling, header keamanan, validasi environment, endpoint `/api/health`.
 - Fase 0: persiapan lingkungan.

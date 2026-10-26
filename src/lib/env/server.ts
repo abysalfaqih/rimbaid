@@ -8,11 +8,33 @@ import { z } from "zod";
  * dari Client Component, sehingga rahasia tidak mungkin bocor ke browser.
  *
  * Variabel rahasia ditambahkan bertahap di fase berikutnya
- * (database, Supabase service role, secret sesi verifikasi, dan lain-lain).
+ * (Supabase service role, secret sesi verifikasi, dan lain-lain).
  */
+
+/** Port Transaction pooler Supabase. Satu-satunya mode yang cocok untuk fungsi serverless. */
+const TRANSACTION_POOLER_PORT = "6543";
+
+function portOf(value: string): string | null {
+  try {
+    return new URL(value).port;
+  } catch {
+    return null;
+  }
+}
+
+const databaseUrlSchema = z
+  .string({ error: "wajib diisi (lihat .env.example)" })
+  .regex(/^postgres(?:ql)?:\/\//, { error: "harus diawali postgresql://" })
+  .refine((value) => !process.env.VERCEL || portOf(value) === TRANSACTION_POOLER_PORT, {
+    error:
+      "di Vercel wajib memakai Transaction pooler (port 6543), bukan Session pooler (5432) " +
+      "atau koneksi langsung",
+  });
+
 const serverSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   VERCEL_ENV: z.enum(["development", "preview", "production"]).optional(),
+  DATABASE_URL: databaseUrlSchema,
 });
 
 export type ServerEnv = z.infer<typeof serverSchema>;
@@ -26,6 +48,7 @@ export function getServerEnv(): ServerEnv {
   const result = serverSchema.safeParse({
     NODE_ENV: process.env.NODE_ENV,
     VERCEL_ENV: process.env.VERCEL_ENV,
+    DATABASE_URL: process.env.DATABASE_URL,
   });
 
   if (!result.success) {
