@@ -98,8 +98,8 @@ tambahkan ke struktur folder: src/db/ (client.ts = koneksi, health.ts = pengecek
 - [x] Fase 1A: fondasi (scaffold, tooling, header keamanan, validasi env)
 - [x] Fase 1B: bahasa, sistem desain, logo, kerangka halaman, deploy pertama (lolos di komputer dan Vercel pemilik)
 - [ ] Fase 2: database.
-  [x] 2A koneksi + health check (menunggu checkpoint) ·
-  [ ] 2B skema + migrasi + RLS
+      [x] 2A koneksi + health check (menunggu checkpoint) ·
+      [ ] 2B skema + migrasi + RLS
 - [ ] Fase 3: login admin + MFA
 - [ ] Fase 4: CRUD admin + unggah gambar
 - [ ] Fase 5: halaman publik (beranda, daftar, detail)

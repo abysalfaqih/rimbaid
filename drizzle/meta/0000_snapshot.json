@@ -1,0 +1,552 @@
+{
+  "id": "84704a81-a4af-474f-aba7-f9450465e9e4",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.app_downloads": {
+      "name": "app_downloads",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "app_id": {
+          "name": "app_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position": {
+          "name": "position",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "label": {
+          "name": "label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "url": {
+          "name": "url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "app_downloads_app_id_apps_id_fk": {
+          "name": "app_downloads_app_id_apps_id_fk",
+          "tableFrom": "app_downloads",
+          "tableTo": "apps",
+          "columnsFrom": [
+            "app_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "app_downloads_app_position_key": {
+          "name": "app_downloads_app_position_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "app_id",
+            "position"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "app_downloads_position_range": {
+          "name": "app_downloads_position_range",
+          "value": "\"app_downloads\".\"position\" >= 0 AND \"app_downloads\".\"position\" < 3"
+        },
+        "app_downloads_label_length": {
+          "name": "app_downloads_label_length",
+          "value": "char_length(btrim(\"app_downloads\".\"label\")) BETWEEN 1 AND 40"
+        },
+        "app_downloads_url_format": {
+          "name": "app_downloads_url_format",
+          "value": "\"app_downloads\".\"url\" ~ '^https://[^[:space:]]+$' AND char_length(\"app_downloads\".\"url\") <= 2048"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.app_recommendations": {
+      "name": "app_recommendations",
+      "schema": "",
+      "columns": {
+        "app_id": {
+          "name": "app_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "recommended_app_id": {
+          "name": "recommended_app_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position": {
+          "name": "position",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "app_recommendations_recommended_idx": {
+          "name": "app_recommendations_recommended_idx",
+          "columns": [
+            {
+              "expression": "recommended_app_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "app_recommendations_app_id_apps_id_fk": {
+          "name": "app_recommendations_app_id_apps_id_fk",
+          "tableFrom": "app_recommendations",
+          "tableTo": "apps",
+          "columnsFrom": [
+            "app_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "app_recommendations_recommended_app_id_apps_id_fk": {
+          "name": "app_recommendations_recommended_app_id_apps_id_fk",
+          "tableFrom": "app_recommendations",
+          "tableTo": "apps",
+          "columnsFrom": [
+            "recommended_app_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "app_recommendations_pkey": {
+          "name": "app_recommendations_pkey",
+          "columns": [
+            "app_id",
+            "position"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "app_recommendations_pair_key": {
+          "name": "app_recommendations_pair_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "app_id",
+            "recommended_app_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "app_recommendations_position_range": {
+          "name": "app_recommendations_position_range",
+          "value": "\"app_recommendations\".\"position\" >= 0 AND \"app_recommendations\".\"position\" < 3"
+        },
+        "app_recommendations_not_self": {
+          "name": "app_recommendations_not_self",
+          "value": "\"app_recommendations\".\"app_id\" <> \"app_recommendations\".\"recommended_app_id\""
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.app_screenshots": {
+      "name": "app_screenshots",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "app_id": {
+          "name": "app_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position": {
+          "name": "position",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "path": {
+          "name": "path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "width": {
+          "name": "width",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "height": {
+          "name": "height",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "app_screenshots_app_id_apps_id_fk": {
+          "name": "app_screenshots_app_id_apps_id_fk",
+          "tableFrom": "app_screenshots",
+          "tableTo": "apps",
+          "columnsFrom": [
+            "app_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "app_screenshots_app_position_key": {
+          "name": "app_screenshots_app_position_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "app_id",
+            "position"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "app_screenshots_position_range": {
+          "name": "app_screenshots_position_range",
+          "value": "\"app_screenshots\".\"position\" >= 0 AND \"app_screenshots\".\"position\" < 8"
+        },
+        "app_screenshots_path_length": {
+          "name": "app_screenshots_path_length",
+          "value": "char_length(\"app_screenshots\".\"path\") BETWEEN 1 AND 300"
+        },
+        "app_screenshots_dimensions": {
+          "name": "app_screenshots_dimensions",
+          "value": "\"app_screenshots\".\"width\" BETWEEN 1 AND 10000 AND \"app_screenshots\".\"height\" BETWEEN 1 AND 10000"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.apps": {
+      "name": "apps",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "logo_path": {
+          "name": "logo_path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "size_label": {
+          "name": "size_label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "version": {
+          "name": "version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "description_id": {
+          "name": "description_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "description_en": {
+          "name": "description_en",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'draft'"
+        },
+        "is_featured": {
+          "name": "is_featured",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "published_at": {
+          "name": "published_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "apps_single_featured_idx": {
+          "name": "apps_single_featured_idx",
+          "columns": [
+            {
+              "expression": "is_featured",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"apps\".\"is_featured\"",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "apps_published_at_idx": {
+          "name": "apps_published_at_idx",
+          "columns": [
+            {
+              "expression": "published_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"apps\".\"status\" = 'published'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "apps_slug_key": {
+          "name": "apps_slug_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "slug"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "apps_slug_format": {
+          "name": "apps_slug_format",
+          "value": "\"apps\".\"slug\" ~ '^[a-z0-9]+(-[a-z0-9]+)*$' AND char_length(\"apps\".\"slug\") <= 80"
+        },
+        "apps_name_length": {
+          "name": "apps_name_length",
+          "value": "char_length(btrim(\"apps\".\"name\")) BETWEEN 1 AND 80"
+        },
+        "apps_logo_path_length": {
+          "name": "apps_logo_path_length",
+          "value": "\"apps\".\"logo_path\" IS NULL OR char_length(\"apps\".\"logo_path\") <= 300"
+        },
+        "apps_size_label_length": {
+          "name": "apps_size_label_length",
+          "value": "\"apps\".\"size_label\" IS NULL OR char_length(btrim(\"apps\".\"size_label\")) BETWEEN 1 AND 20"
+        },
+        "apps_version_length": {
+          "name": "apps_version_length",
+          "value": "\"apps\".\"version\" IS NULL OR char_length(btrim(\"apps\".\"version\")) BETWEEN 1 AND 30"
+        },
+        "apps_description_length": {
+          "name": "apps_description_length",
+          "value": "char_length(\"apps\".\"description_id\") <= 5000 AND char_length(\"apps\".\"description_en\") <= 5000"
+        },
+        "apps_status_valid": {
+          "name": "apps_status_valid",
+          "value": "\"apps\".\"status\" IN ('draft', 'published')"
+        },
+        "apps_published_complete": {
+          "name": "apps_published_complete",
+          "value": "\"apps\".\"status\" = 'draft' OR (\n        \"apps\".\"logo_path\" IS NOT NULL\n        AND \"apps\".\"size_label\" IS NOT NULL\n        AND \"apps\".\"version\" IS NOT NULL\n        AND btrim(\"apps\".\"description_id\") <> ''\n        AND btrim(\"apps\".\"description_en\") <> ''\n        AND \"apps\".\"published_at\" IS NOT NULL\n      )"
+        },
+        "apps_featured_requires_published": {
+          "name": "apps_featured_requires_published",
+          "value": "NOT \"apps\".\"is_featured\" OR \"apps\".\"status\" = 'published'"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.legal_pages": {
+      "name": "legal_pages",
+      "schema": "",
+      "columns": {
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "title_id": {
+          "name": "title_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title_en": {
+          "name": "title_en",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "body_id": {
+          "name": "body_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "body_en": {
+          "name": "body_en",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "legal_pages_slug_valid": {
+          "name": "legal_pages_slug_valid",
+          "value": "\"legal_pages\".\"slug\" IN ('terms', 'privacy', 'disclaimer')"
+        },
+        "legal_pages_title_length": {
+          "name": "legal_pages_title_length",
+          "value": "char_length(btrim(\"legal_pages\".\"title_id\")) BETWEEN 1 AND 120 AND char_length(btrim(\"legal_pages\".\"title_en\")) BETWEEN 1 AND 120"
+        },
+        "legal_pages_body_length": {
+          "name": "legal_pages_body_length",
+          "value": "char_length(btrim(\"legal_pages\".\"body_id\")) BETWEEN 1 AND 100000 AND char_length(btrim(\"legal_pages\".\"body_en\")) BETWEEN 1 AND 100000"
+        }
+      },
+      "isRLSEnabled": true
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
